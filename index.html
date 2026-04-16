@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الصقر للطباعة وتخليص المعاملات</title>
+    
+    <!-- مكتبة Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- تخصيص بعض ألوان Tailwind لتناسب الهوية العصرية -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Tajawal', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#fbf8f3',
+                            100: '#f5eee1',
+                            500: '#d97706', // اللون الذهبي/العنبري المعتمد
+                            600: '#b45309',
+                            900: '#78350f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- الخطوط العربية (تاجوال) -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- مكتبات React الأساسية -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- مكتبة Babel لتحويل الكود ليفهمه المتصفح مباشرة -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #fcfbfa; overflow-x: hidden; }
+        .glass-effect { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* تأثيرات بسيطة للظهور السلس */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // ==========================================
+        // الإعدادات العامة (قم بتعديل الرقم هنا)
+        // ==========================================
+        const WHATSAPP_NUMBER = "971500000000"; // اكتب رقم الواتساب الخاص بك هنا (مع مفتاح الدولة بدون أصفار أو +)
+
+        // --- الأيقونات ---
+        const createIcon = (paths) => ({ className }) => (
+            <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: paths }} />
+        );
+
+        const Menu = createIcon('<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>');
+        const X = createIcon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+        const User = createIcon('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>');
+        const ChefHat = createIcon('<path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589c-.328-1.579-1.921-2.61-3.593-2.61-1.672 0-3.265 1.031-3.593 2.61a4 4 0 0 0-2.134 7.589c.411.197.727.584.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/>');
+        const Car = createIcon('<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>');
+        const FileText = createIcon('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>');
+        const HeartPulse = createIcon('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>');
+        const CreditCard = createIcon('<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>');
+        const MapPin = createIcon('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>');
+        const Shield = createIcon('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.5 0 4.5 1 6.5 2a1 1 0 0 1 1 1z"/>');
+        const CheckCircle = createIcon('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>');
+        const SettingsIcon = createIcon('<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>');
+        const LogOut = createIcon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>');
+        const ChevronLeft = createIcon('<path d="m15 18-6-6 6-6"/>');
+        const Send = createIcon('<line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>');
+        const Plus = createIcon('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>');
+        const Trash = createIcon('<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>');
+        const EditIcon = createIcon('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>');
+        const Star = createIcon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>');
+        const Facebook = createIcon('<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>');
+        const Instagram = createIcon('<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>');
+        const Phone = createIcon('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>');
+        const Mail = createIcon('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
+        const Clock = createIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>');
+        const ThumbsUp = createIcon('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/>');
+        const Zap = createIcon('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>');
+
+        // --- البيانات الافتراضية للأسعار ---
+        const defaultPrices = {
+          maid: 5000,
+          cook: 6000,
+          driver: 4500,
+          visa: 1500,
+          statusChange: 1000,
+          medicalTest: 300,
+          emiratesId: 400,
+          insurance: 800,
+          residency: 1200,
+          rakTransport: 250
+        };
+
+        // عمالة افتراضية للعرض
+        const defaultCustomWorkers = [
+            { id: 1, name: 'ماري جوي', info: 'فلبينية - خبرة 3 سنوات', skills: 'تنظيف, طبخ, رعاية أطفال', price: 4500, image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300&h=300' },
+            { id: 2, name: 'أمينة بيجوم', info: 'سيريلانكية - طباخة ماهرة', skills: 'طبخ عربي, ضيافة', price: 5500, image: 'https://images.unsplash.com/photo-1589156280159-27698a70f29e?auto=format&fit=crop&q=80&w=300&h=300' }
+        ];
+
+        // روابط السوشيال ميديا الافتراضية
+        const defaultSocialLinks = {
+            facebook: 'https://www.facebook.com/alsaqr',
+            instagram: 'https://www.instagram.com/alsaqr'
+        };
+
+        function App() {
+          const [currentView, setCurrentView] = useState('home'); // 'home', 'admin'
+          const [prices, setPrices] = useState(defaultPrices);
+          const [customWorkers, setCustomWorkers] = useState(defaultCustomWorkers);
+          const [socialLinks, setSocialLinks] = useState(defaultSocialLinks);
+          const [transactionCount, setTransactionCount] = useState(5000);
+          const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+          const [selectedService, setSelectedService] = useState(null);
+          const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+          const handlePriceChange = (key, value) => {
+            setPrices(prev => ({ ...prev, [key]: Number(value) }));
+          };
+
+          const handleSocialLinkChange = (platform, value) => {
+            setSocialLinks(prev => ({ ...prev, [platform]: value }));
+          };
+
+          const loginAdmin = (username, password) => {
+            if (username === 'admin' && password === 'zezo310701') {
+              setIsAdminLoggedIn(true);
+              setCurrentView('admin');
+            } else {
+              alert('اسم المستخدم أو كلمة المرور خاطئة');
+            }
+          };
+
+          const handleTransactionComplete = () => {
+            setTransactionCount(prev => prev + 1);
+          };
+
+          return (
+            <div dir="rtl" className="min-h-screen text-slate-800 flex flex-col">
+              {/* --- شريط التنقل --- */}
+              <nav className="glass-effect shadow-sm sticky top-0 z-50 border-b border-slate-200 transition-all duration-300">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex justify-between h-24">
+                    <div className="flex items-center gap-4 cursor-pointer" onClick={() => setCurrentView('home')}>
+                      
+                      {/* ==== منطقة اللوجو المصمم بالكود ==== */}
+                      <div className="h-16 w-16 bg-brand-50 border border-brand-100 rounded-xl p-1.5 flex items-center justify-center shrink-0">
+                          {/* لوجو الصقر الهندسي المبرمج */}
+                          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md" xmlns="http://www.w3.org/2000/svg">
+                              <polygon points="50,10 5,45 30,55 50,30" fill="#d97706"/>
+                              <polygon points="50,10 95,45 70,55 50,30" fill="#b45309"/>
+                              <polygon points="30,55 50,95 50,30" fill="#0f172a"/>
+                              <polygon points="70,55 50,95 50,30" fill="#1e293b"/>
+                          </svg>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                          الصقر
+                        </span>
+                        <span className="text-sm font-semibold text-brand-600">للطباعة وتخليص المعاملات</span>
+                      </div>
+                    </div>
+                    
+                    <div className="hidden md:flex items-center space-x-8 space-x-reverse">
+                      <button onClick={() => setCurrentView('home')} className={`text-lg font-bold px-4 py-2 rounded-full transition-all ${currentView === 'home' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50'}`}>الرئيسية</button>
+                      <button onClick={() => {setCurrentView('home'); setTimeout(()=>document.getElementById('about-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="text-lg font-bold px-4 py-2 rounded-full text-slate-600 hover:text-brand-600 hover:bg-slate-50 transition-all">نبذة عننا</button>
+                      <button onClick={() => {setCurrentView('home'); setTimeout(()=>document.getElementById('services-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="text-lg font-bold px-4 py-2 rounded-full text-slate-600 hover:text-brand-600 hover:bg-slate-50 transition-all">خدماتنا</button>
+                      <button onClick={() => {setCurrentView('home'); setTimeout(()=>document.getElementById('why-us-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="text-lg font-bold px-4 py-2 rounded-full text-slate-600 hover:text-brand-600 hover:bg-slate-50 transition-all">لماذا نتميز</button>
+                      <button onClick={() => {setCurrentView('home'); setTimeout(()=>document.getElementById('contact-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="text-lg font-bold px-4 py-2 rounded-full text-slate-600 hover:text-brand-600 hover:bg-slate-50 transition-all">التواصل</button>
+                      {isAdminLoggedIn ? (
+                        <button onClick={() => setCurrentView('admin')} className={`text-lg font-bold px-4 py-2 rounded-full transition-all ${currentView === 'admin' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50'}`}>لوحة الإدارة</button>
+                      ) : (
+                        <button onClick={() => setCurrentView('login')} className="text-sm font-bold text-slate-400 hover:text-slate-700 transition">دخول الإدارة</button>
+                      )}
+                    </div>
+
+                    <div className="flex md:hidden items-center">
+                      <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 transition">
+                        {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* القائمة الجانبية للموبايل */}
+                {isMenuOpen && (
+                  <div className="md:hidden glass-effect border-t border-slate-100 absolute w-full shadow-lg">
+                    <div className="px-4 pt-4 pb-6 space-y-2">
+                      <button onClick={() => {setCurrentView('home'); setIsMenuOpen(false);}} className="block w-full text-right px-4 py-3 rounded-xl font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-600">الرئيسية</button>
+                      <button onClick={() => {setCurrentView('home'); setIsMenuOpen(false); setTimeout(()=>document.getElementById('about-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="block w-full text-right px-4 py-3 rounded-xl font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-600">نبذة عننا</button>
+                      <button onClick={() => {setCurrentView('home'); setIsMenuOpen(false); setTimeout(()=>document.getElementById('services-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="block w-full text-right px-4 py-3 rounded-xl font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-600">الخدمات</button>
+                      <button onClick={() => {setCurrentView('home'); setIsMenuOpen(false); setTimeout(()=>document.getElementById('why-us-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="block w-full text-right px-4 py-3 rounded-xl font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-600">لماذا نتميز</button>
+                      <button onClick={() => {setCurrentView('home'); setIsMenuOpen(false); setTimeout(()=>document.getElementById('contact-section')?.scrollIntoView({behavior: 'smooth'}), 100)}} className="block w-full text-right px-4 py-3 rounded-xl font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-600">التواصل</button>
+                      {isAdminLoggedIn ? (
+                        <button onClick={() => {setCurrentView('admin'); setIsMenuOpen(false);}} className="block w-full text-right px-4 py-3 rounded-xl font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-600">لوحة الإدارة</button>
+                      ) : (
+                        <button onClick={() => {setCurrentView('login'); setIsMenuOpen(false);}} className="block w-full text-right px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-50">دخول الإدارة</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </nav>
+
+              {/* --- المحتوى الرئيسي --- */}
+              <main className="flex-grow">
+                {currentView === 'home' && <HomeView prices={prices} customWorkers={customWorkers} onSelectService={setSelectedService} transactionCount={transactionCount} />}
+                {currentView === 'login' && <LoginView onLogin={loginAdmin} onBack={() => setCurrentView('home')} />}
+                {currentView === 'admin' && isAdminLoggedIn && <AdminView prices={prices} customWorkers={customWorkers} setCustomWorkers={setCustomWorkers} onPriceChange={handlePriceChange} socialLinks={socialLinks} onSocialLinkChange={handleSocialLinkChange} transactionCount={transactionCount} setTransactionCount={setTransactionCount} onLogout={() => {setIsAdminLoggedIn(false); setCurrentView('home');}} />}
+              </main>
+
+              {/* --- نافذة طلب الخدمة (Modal) --- */}
+              {selectedService && (
+                <ServiceModal 
+                  service={selectedService} 
+                  onClose={() => setSelectedService(null)} 
+                  onTransactionComplete={handleTransactionComplete}
+                />
+              )}
+
+              {/* مكون أزرار السوشيال ميديا العائمة (Liquid Coin) */}
+              <FloatingSocialMedia socialLinks={socialLinks} />
+
+              {/* --- تذييل الصفحة --- */}
+              <footer className="bg-slate-900 text-slate-400 py-12 border-t-4 border-brand-500 mt-auto">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div className="text-center md:text-right">
+                    <h3 className="text-2xl font-black text-white mb-2">الصقر للطباعة وتخليص المعاملات</h3>
+                    <p className="text-sm max-w-sm">نقدم أفضل الكوادر المساعدة والخدمات الحكومية بسرعة واحترافية لتوفير وقتك وجهدك.</p>
+                  </div>
+                  <div className="text-sm text-center md:text-left bg-slate-800 p-4 rounded-2xl">
+                    <p className="text-white font-bold mb-1">تواصل معنا</p>
+                    <p dir="ltr" className="text-brand-400 font-mono text-lg">+{WHATSAPP_NUMBER}</p>
+                  </div>
+                </div>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-8 border-t border-slate-800 text-center text-xs">
+                    جميع الحقوق محفوظة &copy; {new Date().getFullYear()} - الإمارات العربية المتحدة
+                </div>
+              </footer>
+            </div>
+          );
+        }
+
+        // ==========================================
+        // مكون الصفحة الرئيسية
+        // ==========================================
+        function HomeView({ prices, customWorkers, onSelectService, transactionCount }) {
+          return (
+            <div className="pb-16 animate-fade-in">
+              {/* القسم البطل (Hero Section) */}
+              <div className="relative bg-slate-900 overflow-hidden min-h-[80vh] flex items-center">
+                <div className="absolute inset-0">
+                  <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-900/70 to-slate-900/20 z-10" />
+                  <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80" alt="خلفية الإمارات" className="w-full h-full object-cover opacity-100" />
+                </div>
+                
+                <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col items-start w-full">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/80 border border-brand-500/50 text-amber-400 text-sm font-bold mb-8 backdrop-blur-md shadow-lg">
+                    <Star className="h-4 w-4 text-amber-400" />
+                    خيارك الأول في الإمارات
+                  </div>
+                  <h1 className="text-5xl md:text-7xl font-black text-white leading-tight mb-6 max-w-3xl">
+                    الصقر للطباعة <br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-l from-brand-300 to-brand-600">وتخليص المعاملات</span>
+                  </h1>
+                  <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl leading-relaxed">
+                    خدمات استقدام العمالة المساعدة الموثوقة وإنجاز كافة المعاملات الحكومية والتأشيرات الطبية بكل احترافية، راحة بالك هي غايتنا.
+                  </p>
+                  <button 
+                    onClick={() => window.scrollTo({top: document.getElementById('services-section').offsetTop - 80, behavior: 'smooth'})}
+                    className="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-200 bg-brand-600 rounded-2xl hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-600 shadow-xl shadow-brand-900/30 overflow-hidden"
+                  >
+                    <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black"></span>
+                    <span className="relative flex items-center gap-2 text-lg">
+                      تصفح خدماتنا
+                      <ChevronLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+                    </span>
+                  </button>
+                </div>
+                
+                {/* عنصر ديكور سفلي */}
+                <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-[#fcfbfa] to-transparent z-20"></div>
+              </div>
+
+              {/* === قسم نبذة عننا === */}
+              <div id="about-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+                 <div className="bg-white rounded-[2.5rem] p-8 md:p-14 shadow-sm border border-slate-100 flex flex-col md:flex-row gap-12 items-center">
+                    <div className="flex-1 space-y-6">
+                       <span className="text-brand-600 font-bold tracking-wider text-sm bg-brand-50 px-3 py-1.5 rounded-full">من نحن</span>
+                       <h2 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight">عراقة الإنجاز <br/>وسرعة الأداء في مكان واحد</h2>
+                       <p className="text-lg text-slate-600 leading-relaxed">
+                          مؤسسة "الصقر للطباعة وتخليص المعاملات" هي وجهتك الموثوقة الأولى في دولة الإمارات العربية المتحدة. نحن نجمع بين الخبرة العميقة في تخليص المعاملات الحكومية خبره اكثر من خمس سنوات ،استقدام أفضل الكوادر من العمالة المساعدة لتلبية احتياجات أسرتك وعملك بكل احترافية ومصداقية.
+                       </p>
+                       <div className="flex gap-6 pt-4">
+                          <div className="flex flex-col gap-1 border-l border-slate-200 pl-6">
+                             <span className="text-3xl font-black text-brand-500">+5</span>
+                             <span className="text-sm font-bold text-slate-500">سنوات خبرة</span>
+                          </div>
+                          <div className="flex flex-col gap-1 border-l border-slate-200 pl-6">
+                             <span className="text-3xl font-black text-brand-500">+{transactionCount}</span>
+                             <span className="text-sm font-bold text-slate-500">معاملة ناجحة</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                             <span className="text-3xl font-black text-brand-500">100%</span>
+                             <span className="text-sm font-bold text-slate-500">رضا العملاء</span>
+                          </div>
+                       </div>
+                    </div>
+                    <div className="flex-1 relative w-full">
+                       <div className="absolute inset-0 bg-brand-500 translate-x-4 translate-y-4 rounded-[2.5rem] -z-10 opacity-20"></div>
+                       <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80" alt="عن الصقر" className="rounded-[2.5rem] shadow-xl w-full h-[400px] object-cover" />
+                    </div>
+                 </div>
+              </div>
+
+              <div id="services-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+                
+                {/* 1. قسم العمالة المتاحة (كروت الآدمن) */}
+                {customWorkers.length > 0 && (
+                  <div className="mb-24">
+                    <SectionHeader title="عمالة مساعدة متاحة حالياً" subtitle="اختر من بين أفضل الكفاءات المتوفرة لدينا الآن" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {customWorkers.map(worker => (
+                        <div key={worker.id} className="bg-white rounded-3xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 group flex flex-col relative overflow-hidden">
+                          <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 relative bg-slate-100">
+                             <img src={worker.image || 'https://via.placeholder.com/300?text=بدون+صورة'} alt={worker.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          </div>
+                          <h3 className="text-xl font-black text-slate-900 mb-1">{worker.name}</h3>
+                          <p className="text-brand-600 font-medium text-sm mb-3">{worker.info}</p>
+                          
+                          <div className="flex flex-wrap gap-2 mb-6 flex-grow">
+                            {worker.skills.split(',').map((skill, idx) => (
+                                <span key={idx} className="bg-slate-50 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-100">{skill.trim()}</span>
+                            ))}
+                          </div>
+                          
+                          <div className="flex items-center justify-between pt-4 border-t border-slate-50 mt-auto">
+                            <span className="text-xl font-black text-slate-900">{worker.price} <span className="text-xs text-slate-400 font-medium">د.إ</span></span>
+                            <button 
+                              onClick={() => onSelectService({ type: 'specific_worker', name: `استقدام: ${worker.name}`, workerName: worker.name, price: worker.price })} 
+                              className="bg-slate-900 hover:bg-brand-600 text-white p-2.5 rounded-xl transition-colors"
+                            >
+                              <Send className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. قسم طلب فئات العمالة العامة */}
+                <div className="mb-24">
+                  <SectionHeader title="طلب فئات العمالة" subtitle="نوفر لك عمالة مدربة حسب طلبك واحتياجك" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <ServiceCard 
+                      icon={<User className="h-8 w-8" />} title="خادم / خادمة" 
+                      desc="رعاية منزلية شاملة، تنظيف واهتمام بأدق تفاصيل منزلك." price={prices.maid}
+                      onClick={() => onSelectService({ type: 'worker', role: 'maid', name: 'خادم / خادمة', price: prices.maid })} 
+                    />
+                    <ServiceCard 
+                      icon={<ChefHat className="h-8 w-8" />} title="طباخ / طباخة" 
+                      desc="إعداد أشهى المأكولات العربية والعالمية بخبرة واحترافية." price={prices.cook}
+                      onClick={() => onSelectService({ type: 'worker', role: 'cook', name: 'طباخ / طباخة', price: prices.cook })} 
+                    />
+                    <ServiceCard 
+                      icon={<Car className="h-8 w-8" />} title="سائق / سائقة" 
+                      desc="سائقون ذوو خبرة وأمانة، ومعرفة تامة بشوارع الدولة." price={prices.driver}
+                      onClick={() => onSelectService({ type: 'worker', role: 'driver', name: 'سائق / سائقة', price: prices.driver })} 
+                    />
+                  </div>
+                </div>
+
+                {/* 3. قسم الخدمات الحكومية */}
+                <div className="mb-24">
+                  <SectionHeader title="خدمات الطباعة وتخليص المعاملات" subtitle="ننجز أوراقك الحكومية بسرعة ودقة وأمان" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <GovServiceCard icon={<FileText />} title="عمل تأشيرة" price={prices.visa} onClick={() => onSelectService({ type: 'gov', name: 'عمل تأشيرة', price: prices.visa })} />
+                    <GovServiceCard icon={<CheckCircle />} title="تعديل وضع" price={prices.statusChange} onClick={() => onSelectService({ type: 'gov', name: 'تعديل وضع', price: prices.statusChange })} />
+                    <GovServiceCard icon={<HeartPulse />} title="فحص طبي" price={prices.medicalTest} onClick={() => onSelectService({ type: 'gov', name: 'فحص طبي', price: prices.medicalTest })} />
+                    <GovServiceCard icon={<CreditCard />} title="إصدار هوية" price={prices.emiratesId} onClick={() => onSelectService({ type: 'gov', name: 'إصدار هوية', price: prices.emiratesId })} />
+                    <GovServiceCard icon={<Shield />} title="تأمين طبي" price={prices.insurance} onClick={() => onSelectService({ type: 'gov', name: 'تأمين طبي', price: prices.insurance })} />
+                    <GovServiceCard icon={<FileText />} title="إصدار إقامة" price={prices.residency} onClick={() => onSelectService({ type: 'gov', name: 'إصدار إقامة', price: prices.residency })} />
+                  </div>
+                </div>
+
+                {/* 4. خدمة رأس الخيمة */}
+                <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden shadow-2xl">
+                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-brand-500 rounded-full blur-[80px] opacity-20"></div>
+                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="flex items-start gap-5">
+                      <div className="bg-brand-500 text-white p-4 rounded-2xl shadow-lg shadow-brand-500/30">
+                        <MapPin className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl md:text-3xl font-black text-white mb-2">خدمة رأس الخيمة V.I.P</h3>
+                        <p className="text-slate-300 max-w-xl text-lg">خدمة حصرية لتوصيل العامل المساعد لإجراء الفحص الطبي داخل إمارة رأس الخيمة بسيارات مريحة وأمان تام.</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-4 w-full md:w-auto bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10">
+                      <div className="text-center">
+                         <span className="block text-sm text-brand-300 font-bold mb-1">رسوم الخدمة</span>
+                         <span className="text-4xl font-black text-white">{prices.rakTransport} <span className="text-lg font-normal text-slate-400">درهم</span></span>
+                      </div>
+                      <button 
+                        onClick={() => onSelectService({ type: 'special', name: 'توصيل الفحص الطبي - رأس الخيمة', price: prices.rakTransport })}
+                        className="w-full bg-brand-500 hover:bg-brand-400 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-brand-500/50 flex items-center justify-center gap-2"
+                      >
+                        اطلب الآن
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* === قسم لماذا تختارنا === */}
+                <div id="why-us-section" className="mb-24 mt-32">
+                  <SectionHeader title="لماذا تختار الصقر؟" subtitle="مميزات تجعلنا الخيار الأمثل لخدماتك" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                     <div className="bg-brand-50 rounded-3xl p-8 text-center hover:-translate-y-2 transition-transform duration-300 border border-brand-100">
+                        <div className="w-20 h-20 bg-brand-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-brand-500/30">
+                           <Zap className="w-10 h-10" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 mb-3">سرعة في الإنجاز</h3>
+                        <p className="text-slate-600 leading-relaxed">نقدر وقتك الثمين، لذلك نحرص على إنهاء كافة المعاملات في وقت قياسي وبدقة متناهية.</p>
+                     </div>
+                     <div className="bg-emerald-50 rounded-3xl p-8 text-center hover:-translate-y-2 transition-transform duration-300 border border-emerald-100">
+                        <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30">
+                           <Shield className="w-10 h-10" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 mb-3">أمانة وموثوقية</h3>
+                        <p className="text-slate-600 leading-relaxed">نلتزم بأعلى معايير الشفافية والوضوح في التعاملات والأسعار دون أي رسوم خفية.</p>
+                     </div>
+                     <div className="bg-blue-50 rounded-3xl p-8 text-center hover:-translate-y-2 transition-transform duration-300 border border-blue-100">
+                        <div className="w-20 h-20 bg-blue-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
+                           <ThumbsUp className="w-10 h-10" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 mb-3">دعم فني متواصل</h3>
+                        <p className="text-slate-600 leading-relaxed">فريقنا متواجد دائماً للرد على استفساراتكم ومتابعة طلباتكم حتى بعد تقديم الخدمة.</p>
+                     </div>
+                  </div>
+                </div>
+
+                {/* === قسم طرق التواصل === */}
+                <div id="contact-section" className="bg-slate-50 rounded-[2.5rem] p-8 md:p-12 mb-10 border border-slate-200">
+                  <SectionHeader title="تواصل معنا بسهولة" subtitle="نحن هنا للاستماع إليك وتلبية احتياجاتك" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+                     <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="bg-brand-100 text-brand-600 p-4 rounded-xl shrink-0"><Phone className="w-8 h-8" /></div>
+                        <div>
+                           <p className="text-sm font-bold text-slate-400 mb-1">اتصل بنا</p>
+                           <p className="text-lg font-black text-slate-900" dir="ltr">+{WHATSAPP_NUMBER}</p>
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="bg-brand-100 text-brand-600 p-4 rounded-xl shrink-0"><Mail className="w-8 h-8" /></div>
+                        <div>
+                           <p className="text-sm font-bold text-slate-400 mb-1">البريد الإلكتروني</p>
+                           <p className="text-lg font-black text-slate-900">info@alsaqr.ae</p>
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="bg-brand-100 text-brand-600 p-4 rounded-xl shrink-0"><Clock className="w-8 h-8" /></div>
+                        <div>
+                           <p className="text-sm font-bold text-slate-400 mb-1">أوقات العمل</p>
+                           <p className="text-lg font-black text-slate-900">8 صباحاً - 9 مساءً</p>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          );
+        }
+
+        // ==========================================
+        // مكونات فرعية
+        // ==========================================
+        const SectionHeader = ({ title, subtitle }) => (
+          <div className="mb-12">
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">{title}</h2>
+            <div className="w-20 h-1.5 bg-brand-500 rounded-full mb-4"></div>
+            <p className="text-lg text-slate-500 font-medium">{subtitle}</p>
+          </div>
+        );
+
+        const ServiceCard = ({ icon, title, desc, price, onClick }) => (
+          <div className="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 group flex flex-col h-full hover:-translate-y-1">
+            <div className="text-brand-600 mb-6 bg-brand-50 w-16 h-16 rounded-2xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-colors duration-300">
+              {icon}
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 mb-3">{title}</h3>
+            <p className="text-slate-500 mb-8 flex-grow leading-relaxed">{desc}</p>
+            <div className="flex items-center justify-between mt-auto">
+              <div>
+                 <span className="block text-xs font-bold text-slate-400 mb-1">يبدأ من</span>
+                 <span className="text-2xl font-black text-slate-900">{price} <span className="text-sm font-bold text-brand-600">د.إ</span></span>
+              </div>
+              <button onClick={onClick} className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                 <ChevronLeft className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        );
+
+        const GovServiceCard = ({ icon, title, price, onClick }) => (
+          <div onClick={onClick} className="bg-white p-5 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/10 transition-all cursor-pointer flex items-center justify-between group">
+            <div className="flex items-center gap-4">
+              <div className="text-brand-500 bg-brand-50 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                {React.cloneElement(icon, { className: 'h-6 w-6' })}
+              </div>
+              <h4 className="text-lg font-bold text-slate-800">{title}</h4>
+            </div>
+            <div className="text-left bg-slate-50 px-3 py-1.5 rounded-lg group-hover:bg-brand-50 transition-colors">
+              <span className="block font-black text-slate-900 group-hover:text-brand-700">{price} <span className="text-xs">د.إ</span></span>
+            </div>
+          </div>
+        );
+
+        // ==========================================
+        // مكون أزرار السوشيال ميديا العائمة (Liquid Coin)
+        // ==========================================
+        function FloatingSocialMedia({ socialLinks }) {
+          const [isOpen, setIsOpen] = useState(false);
+
+          return (
+            <div className="fixed bottom-6 left-6 z-[90] flex flex-col-reverse items-center gap-4" onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}>
+               {/* الزر الرئيسي (الكوين العائمة) مع الهالة الملونة */}
+               <div className="relative w-16 h-16 flex items-center justify-center">
+                   {/* الهالة (النبض) تظهر خلف الزر وتختفي عند فتح القائمة */}
+                   <div className={`absolute inset-0 bg-brand-500 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] opacity-75 ${isOpen ? 'hidden' : ''}`}></div>
+                   <button 
+                      onClick={() => setIsOpen(!isOpen)}
+                      className="w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl hover:shadow-brand-500/50 transition-all duration-300 relative overflow-hidden group z-10"
+                   >
+                      <div className="absolute inset-0 bg-gradient-to-tr from-brand-600 to-brand-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="relative flex items-center justify-center transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
+                         {isOpen ? <X className="w-8 h-8" /> : <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21a9 9 0 1 0-9-9c0 1.488.36 2.89 1 4.127L3 21l4.873-1c1.236.64 2.64 1 4.127 1Z"/></svg>}
+                      </div>
+                   </button>
+               </div>
+
+               {/* الأزرار الفرعية */}
+               <div className={`flex flex-col gap-3 transition-all duration-500 origin-bottom ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-10 scale-50 pointer-events-none'}`}>
+                  {/* WhatsApp */}
+                  <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" title="واتساب" className="w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 relative group">
+                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                  </a>
+                  {/* Instagram */}
+                  {socialLinks?.instagram && (
+                    <a href={socialLinks.instagram} target="_blank" title="انستجرام" className="w-12 h-12 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 relative group">
+                       <Instagram className="w-6 h-6" />
+                    </a>
+                  )}
+                  {/* Facebook */}
+                  {socialLinks?.facebook && (
+                    <a href={socialLinks.facebook} target="_blank" title="فيسبوك" className="w-12 h-12 bg-[#1877F2] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 relative group">
+                       <Facebook className="w-6 h-6 fill-current" />
+                    </a>
+                  )}
+               </div>
+            </div>
+          );
+        }
+
+        // ==========================================
+        // نافذة طلب الخدمة والربط بالواتساب
+        // ==========================================
+        function ServiceModal({ service, onClose, onTransactionComplete }) {
+          const [gender, setGender] = useState('female');
+          const [name, setName] = useState('');
+          const [phone, setPhone] = useState('');
+
+          const handleWhatsAppSubmit = (e) => {
+            e.preventDefault();
+            
+            // تكوين رسالة الواتساب
+            let message = `مرحباً الصقر للطباعة، أرغب بطلب خدمة من موقعكم:\n\n`;
+            message += `🔹 *الخدمة المطلوبة:* ${service.name}\n`;
+            message += `👤 *الاسم الكريم:* ${name}\n`;
+            message += `📱 *رقم التواصل:* ${phone}\n`;
+            
+            if (service.type === 'worker') {
+              message += `\n🚻 *الجنس المطلوب للعمالة:* ${gender === 'female' ? 'أنثى' : 'ذكر'}`;
+            }
+
+            const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+            if (onTransactionComplete) onTransactionComplete();
+            onClose();
+          };
+
+          return (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+              <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl transform transition-all">
+                <div className="bg-slate-50 p-6 flex justify-between items-start border-b border-slate-100">
+                  <div>
+                    <span className="text-brand-600 font-bold text-xs bg-brand-100 px-2 py-1 rounded mb-2 inline-block">طلب جديد</span>
+                    <h2 className="text-xl font-black text-slate-900">{service.name}</h2>
+                  </div>
+                  <button onClick={onClose} className="text-slate-400 hover:text-slate-700 bg-white p-2 rounded-full shadow-sm transition">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="p-6 md:p-8">
+                    <form onSubmit={handleWhatsAppSubmit} className="space-y-5">
+                      
+                      {service.type === 'worker' && (
+                        <div className="space-y-3">
+                          <label className="block text-sm font-bold text-slate-700">الجنس المطلوب</label>
+                          <div className="flex gap-3">
+                            <label className={`flex-1 flex justify-center items-center gap-2 p-3 border-2 rounded-xl cursor-pointer transition-all ${gender === 'female' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-100 hover:border-slate-200'}`}>
+                              <input type="radio" name="gender" value="female" checked={gender === 'female'} onChange={(e) => setGender(e.target.value)} className="sr-only" />
+                              <span className="font-bold">أنثى</span>
+                            </label>
+                            <label className={`flex-1 flex justify-center items-center gap-2 p-3 border-2 rounded-xl cursor-pointer transition-all ${gender === 'male' ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-100 hover:border-slate-200'}`}>
+                              <input type="radio" name="gender" value="male" checked={gender === 'male'} onChange={(e) => setGender(e.target.value)} className="sr-only" />
+                              <span className="font-bold">ذكر</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">الاسم الكامل</label>
+                          <input required type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition bg-slate-50 focus:bg-white font-medium" placeholder="أدخل اسمك الكريم" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">رقم الهاتف للواتساب</label>
+                          <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition bg-slate-50 focus:bg-white text-left font-mono text-lg" dir="ltr" placeholder="05X XXX XXXX" />
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 p-4 rounded-xl flex justify-between items-center mt-6">
+                        <span className="font-bold text-slate-300 text-sm">تكلفة الخدمة المتوقعة:</span>
+                        <span className="text-xl font-black text-white">{service.price} <span className="text-xs font-normal text-slate-400">درهم</span></span>
+                      </div>
+
+                      <button type="submit" className="w-full bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-2">
+                        <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                        إرسال الطلب عبر واتساب
+                      </button>
+                    </form>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // ==========================================
+        // شاشة تسجيل دخول الإدارة
+        // ==========================================
+        function LoginView({ onLogin, onBack }) {
+          const [username, setUsername] = useState('');
+          const [password, setPassword] = useState('');
+
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            onLogin(username, password);
+          };
+
+          return (
+            <div className="flex-grow flex items-center justify-center px-4 py-20 bg-slate-50">
+              <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-12 border border-slate-100">
+                <div className="text-center mb-8">
+                  <div className="mx-auto w-20 h-20 bg-brand-50 rounded-2xl flex items-center justify-center mb-6 text-brand-600 shadow-inner">
+                    <SettingsIcon className="h-10 w-10" />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900">بوابة الإدارة</h2>
+                  <p className="text-slate-500 mt-2 font-medium">أدخل بيانات الدخول للوصول للوحة التحكم</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <input 
+                      type="text" 
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 focus:border-brand-500 focus:ring-0 outline-none transition text-center text-xl font-bold bg-slate-50 focus:bg-white mb-4"
+                      placeholder="اسم المستخدم (admin)"
+                      dir="ltr"
+                      required
+                    />
+                    <input 
+                      type="password" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 focus:border-brand-500 focus:ring-0 outline-none transition text-center text-2xl tracking-[0.3em] font-mono bg-slate-50 focus:bg-white"
+                      placeholder="••••••••"
+                      dir="ltr"
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg py-4 rounded-xl transition shadow-xl">
+                    تسجيل الدخول
+                  </button>
+                  <button type="button" onClick={onBack} className="w-full bg-transparent hover:bg-slate-100 text-slate-600 font-bold py-3 rounded-xl transition">
+                    العودة للموقع
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        }
+
+        // ==========================================
+        // لوحة الإدارة (إضافة عمالة + تعديل أسعار + تواصل)
+        // ==========================================
+        function AdminView({ prices, onPriceChange, customWorkers, setCustomWorkers, socialLinks, onSocialLinkChange, transactionCount, setTransactionCount, onLogout }) {
+          
+          const [newWorker, setNewWorker] = useState({ name: '', info: '', skills: '', price: '', image: '' });
+          const [editingId, setEditingId] = useState(null);
+
+          const handleAddOrUpdateWorker = (e) => {
+             e.preventDefault();
+             if(!newWorker.name || !newWorker.price) return;
+             
+             if (editingId) {
+                 setCustomWorkers(customWorkers.map(w => w.id === editingId ? { ...newWorker, id: editingId, price: Number(newWorker.price) } : w));
+                 setEditingId(null);
+             } else {
+                 const workerToAdd = {
+                     ...newWorker,
+                     id: Date.now(),
+                     price: Number(newWorker.price)
+                 };
+                 setCustomWorkers([workerToAdd, ...customWorkers]);
+             }
+             setNewWorker({ name: '', info: '', skills: '', price: '', image: '' }); // Reset
+          };
+
+          const handleEditWorker = (worker) => {
+             setNewWorker(worker);
+             setEditingId(worker.id);
+             window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+
+          const handleCancelEdit = () => {
+             setNewWorker({ name: '', info: '', skills: '', price: '', image: '' });
+             setEditingId(null);
+          };
+
+          const handleDeleteWorker = (id) => {
+             if(confirm('هل أنت متأكد من حذف هذا الكرت؟')) {
+                 setCustomWorkers(customWorkers.filter(w => w.id !== id));
+             }
+          };
+
+          const serviceCategories = [
+            {
+              title: "رسوم الفئات العامة (الرئيسية)",
+              items: [
+                { id: 'maid', name: 'خادم / خادمة' },
+                { id: 'cook', name: 'طباخ / طباخة' },
+                { id: 'driver', name: 'سائق / سائقة' },
+              ]
+            },
+            {
+              title: "رسوم الخدمات الحكومية",
+              items: [
+                { id: 'visa', name: 'عمل تأشيرة' },
+                { id: 'statusChange', name: 'تعديل وضع' },
+                { id: 'medicalTest', name: 'فحص طبي' },
+                { id: 'emiratesId', name: 'إصدار هوية' },
+                { id: 'insurance', name: 'تأمين طبي' },
+                { id: 'residency', name: 'إصدار إقامة' },
+              ]
+            },
+            {
+              title: "الخدمات الخاصة",
+              items: [
+                { id: 'rakTransport', name: 'توصيل الفحص الطبي - رأس الخيمة' },
+              ]
+            }
+          ];
+
+          return (
+            <div className="max-w-6xl mx-auto px-4 py-12 animate-fade-in">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900">لوحة تحكم الإدارة</h2>
+                  <p className="text-brand-600 mt-1 font-bold">إدارة الكروت، الأسعار، والروابط</p>
+                </div>
+                <button onClick={onLogout} className="flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 px-6 py-3 rounded-xl font-bold transition">
+                  <LogOut className="h-5 w-5" />
+                  خروج
+                </button>
+              </div>
+
+              {/* قسم إضافة كروت العمالة */}
+              <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden mb-12">
+                 <div className="bg-slate-900 px-8 py-6">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <User className="h-6 w-6 text-brand-400" />
+                        إدارة كروت العمالة المتاحة (تظهر في الموقع مباشرة)
+                    </h3>
+                 </div>
+                 
+                 <div className="p-8">
+                     {/* نموذج الإضافة والتعديل */}
+                     <form onSubmit={handleAddOrUpdateWorker} className="bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-8">
+                         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <Plus className="h-5 w-5"/> {editingId ? 'تعديل بيانات العامل' : 'إضافة كرت جديد'}
+                         </h4>
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                             <div>
+                                 <label className="block text-xs font-bold text-slate-500 mb-1">الاسم الكامل</label>
+                                 <input required value={newWorker.name} onChange={e=>setNewWorker({...newWorker, name: e.target.value})} className="w-full p-3 rounded-lg border border-slate-300 outline-none focus:border-brand-500" placeholder="مثال: سارة أحمد" />
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-slate-500 mb-1">الجنسية / معلومات قصيرة</label>
+                                 <input required value={newWorker.info} onChange={e=>setNewWorker({...newWorker, info: e.target.value})} className="w-full p-3 rounded-lg border border-slate-300 outline-none focus:border-brand-500" placeholder="مثال: فلبينية - خبرة سنتين" />
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-slate-500 mb-1">المهارات (افصل بينها بفاصلة)</label>
+                                 <input required value={newWorker.skills} onChange={e=>setNewWorker({...newWorker, skills: e.target.value})} className="w-full p-3 rounded-lg border border-slate-300 outline-none focus:border-brand-500" placeholder="مثال: طبخ، تنظيف، أطفال" />
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-slate-500 mb-1">السعر (درهم)</label>
+                                 <input required type="number" value={newWorker.price} onChange={e=>setNewWorker({...newWorker, price: e.target.value})} className="w-full p-3 rounded-lg border border-slate-300 outline-none focus:border-brand-500 text-left" dir="ltr" placeholder="5000" />
+                             </div>
+                             <div className="lg:col-span-2">
+                                 <label className="block text-xs font-bold text-slate-500 mb-1">رابط الصورة (URL)</label>
+                                 <input value={newWorker.image} onChange={e=>setNewWorker({...newWorker, image: e.target.value})} className="w-full p-3 rounded-lg border border-slate-300 outline-none focus:border-brand-500 text-left" dir="ltr" placeholder="https://..." />
+                             </div>
+                         </div>
+                         <div className="mt-4 flex gap-3">
+                             <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-8 rounded-xl transition">
+                                 {editingId ? 'حفظ التعديلات' : 'إضافة العامل'}
+                             </button>
+                             {editingId && (
+                                 <button type="button" onClick={handleCancelEdit} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-8 rounded-xl transition">
+                                     إلغاء التعديل
+                                 </button>
+                             )}
+                         </div>
+                     </form>
+
+                     {/* قائمة الكروت الحالية */}
+                     {customWorkers.length > 0 && (
+                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                             {customWorkers.map(w => (
+                                 <div key={w.id} className="border border-slate-200 rounded-xl p-4 flex flex-col relative">
+                                     <button onClick={()=>handleDeleteWorker(w.id)} className="absolute top-2 left-2 bg-red-100 text-red-600 p-1.5 rounded-lg hover:bg-red-500 hover:text-white transition z-10" title="حذف"><Trash className="h-4 w-4"/></button>
+                                     <button onClick={()=>handleEditWorker(w)} className="absolute top-2 left-10 bg-blue-100 text-blue-600 p-1.5 rounded-lg hover:bg-blue-500 hover:text-white transition z-10" title="تعديل"><EditIcon className="h-4 w-4"/></button>
+                                     <div className="h-32 bg-slate-100 rounded-lg mb-3 overflow-hidden">
+                                         <img src={w.image || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" />
+                                     </div>
+                                     <h5 className="font-bold text-slate-900">{w.name}</h5>
+                                     <p className="text-xs text-slate-500 mb-2">{w.info}</p>
+                                     <p className="font-black text-brand-600 mt-auto">{w.price} درهم</p>
+                                 </div>
+                             ))}
+                         </div>
+                     )}
+                 </div>
+              </div>
+
+              {/* قسم إعدادات الموقع العامة */}
+              <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden mb-12">
+                  <div className="bg-slate-50 px-8 py-5 border-b border-slate-200">
+                    <h3 className="text-lg font-bold text-slate-800">إعدادات الموقع العامة</h3>
+                  </div>
+                  <div className="p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-50 pb-4">
+                      <label className="text-sm font-bold text-slate-700">عداد المعاملات الناجحة (يتم زيادته تلقائياً عند أي طلب)</label>
+                      <input 
+                        type="number" 
+                        value={transactionCount}
+                        onChange={(e) => setTransactionCount(Number(e.target.value))}
+                        className="w-full sm:w-48 px-4 py-2.5 rounded-lg border-2 border-slate-200 focus:border-brand-500 outline-none transition font-black text-slate-900 bg-slate-50 focus:bg-white text-left"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+              </div>
+
+              {/* قسم تعديل الأسعار وروابط السوشيال ميديا */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {serviceCategories.map((category, idx) => (
+                  <div key={idx} className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-slate-50 px-8 py-5 border-b border-slate-200">
+                      <h3 className="text-lg font-bold text-slate-800">{category.title}</h3>
+                    </div>
+                    <div className="p-8">
+                      <div className="flex flex-col gap-5">
+                        {category.items.map(item => (
+                          <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-50 pb-4 last:border-0 last:pb-0">
+                            <label className="text-sm font-bold text-slate-700">{item.name}</label>
+                            <div className="relative w-full sm:w-48">
+                              <input 
+                                type="number" 
+                                value={prices[item.id]}
+                                onChange={(e) => onPriceChange(item.id, e.target.value)}
+                                className="w-full pl-12 pr-4 py-2.5 rounded-lg border-2 border-slate-200 focus:border-brand-500 outline-none transition font-black text-slate-900 bg-slate-50 focus:bg-white"
+                                dir="ltr"
+                              />
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">
+                                AED
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* قسم تعديل روابط السوشيال ميديا */}
+                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="bg-slate-50 px-8 py-5 border-b border-slate-200">
+                    <h3 className="text-lg font-bold text-slate-800">روابط السوشيال ميديا</h3>
+                  </div>
+                  <div className="p-8">
+                    <div className="flex flex-col gap-5">
+                      <div className="flex flex-col gap-2 border-b border-slate-50 pb-4">
+                        <label className="text-sm font-bold text-slate-700">رابط الانستجرام</label>
+                        <input 
+                          type="text" 
+                          value={socialLinks.instagram}
+                          onChange={(e) => onSocialLinkChange('instagram', e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-200 focus:border-brand-500 outline-none transition font-medium text-slate-900 bg-slate-50 focus:bg-white text-left"
+                          dir="ltr"
+                          placeholder="https://www.instagram.com/..."
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-bold text-slate-700">رابط الفيسبوك</label>
+                        <input 
+                          type="text" 
+                          value={socialLinks.facebook}
+                          onChange={(e) => onSocialLinkChange('facebook', e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-200 focus:border-brand-500 outline-none transition font-medium text-slate-900 bg-slate-50 focus:bg-white text-left"
+                          dir="ltr"
+                          placeholder="https://www.facebook.com/..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 p-5 bg-blue-50 text-blue-800 rounded-2xl flex items-start gap-4 border border-blue-100">
+                 <div className="mt-0.5"><CheckCircle className="h-6 w-6 text-blue-600" /></div>
+                 <div>
+                    <p className="font-bold mb-1">ملاحظة للإدارة:</p>
+                    <p className="text-sm">التعديلات على الكروت أو الأسعار تنعكس فوراً للمستخدمين. (ملاحظة تقنية: في هذه النسخة تعتمد التعديلات على الجلسة الحالية).</p>
+                 </div>
+              </div>
+            </div>
+          );
+        }
+
+        // --- أمر تشغيل التطبيق وعرضه في الشاشة ---
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
